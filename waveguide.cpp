@@ -45,6 +45,27 @@ int main(int argc, char* argv[]) {
         vertices[2*i+1] = atof(y);
     }
 
+    getline(file, line);
+    int number_of_faces = atoi(line.c_str());
+    cout << number_of_faces << endl;
+    int *faces = new int[3 * number_of_faces];
+
+    //skip next line
+    getline(file, line);
+
+    for (int i = 0; i < number_of_faces; i++) {
+        getline(file, line);
+        char buf[line.length()];
+        strcpy(buf, line.c_str());
+
+        char *index0 = strtok(buf, delim);
+        char *index1 = strtok(NULL, delim);
+        char *index2 = strtok(NULL, delim);
+        faces[3*i] = atoi(index0);
+        faces[3*i+1] = atoi(index1);
+        faces[3*i+2] = atoi(index2);
+    }
+
     file.close();
 
     //...
