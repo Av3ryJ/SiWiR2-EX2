@@ -2,18 +2,10 @@
 #include <fstream>
 #include <cmath>
 #include <string>
-#include <map>
-#include <forward_list>
 #include "cstring"
-
-void computeKSquared(double *vertices, double delta, double *ksq, int number_of_vertices) {
-    double factor = 100 + delta;
-    for (int i = 0; i < number_of_vertices; i++) {
-        double x = vertices[2*i];
-        double y = vertices[2*i+1];
-        ksq[i] = factor*exp(-50*x*x+y*y) - 100;
-    }
-}
+#include "Colsamm/Colsamm.h"
+#include "Vertex.hpp"
+#include "Face.hpp"
 
 int main(int argc, char* argv[]) {
     using namespace std;
@@ -29,72 +21,67 @@ int main(int argc, char* argv[]) {
         int refLvl = atoi(argv[3]);
     }
 
-    //input stream from file
-    ifstream file("../unit_circle.txt");
+    //input stream from readfile
+    ifstream readfile("../unit_circle.txt");
 
     string line;
-    getline(file, line);
+    getline(readfile, line);
     int number_of_vertices = atoi(line.c_str());    // get number of vertices from first line
-    cout << number_of_vertices << endl;
+    cout << number_of_vertices << " vertices" << endl;
 
     //skip second line
-    getline(file, line);
+    getline(readfile, line);
 
-    // array to store coordinates of vertices: [x0, y0, x1, y1, x2, y2, ...]
-    double *vertices = new double[2*number_of_vertices];
+    // array to store vertices
+    auto *vertices = new Vertex[number_of_vertices];
 
     char delim[] = " ";
     for (int i = 0; i < number_of_vertices; i++) {
-        getline(file, line);
+        getline(readfile, line);
         char buf[line.length()];
         strcpy(buf, line.c_str());
 
         char *index = strtok(buf, delim);
         char *x = strtok(NULL, delim);
         char *y = strtok(NULL, delim);
-        //cout << "index = " << index << "; x = " << x << "; y = " << y << endl;
-        vertices[2*i] = atof(x);
-        vertices[2*i+1] = atof(y);
+        vertices[i].x_ = atof(x);
+        vertices[i].y_ = atof(y);
+        vertices[i].index_ = atoi(index);
+        vertices[i].computeKsq(delta);
     }
 
-    getline(file, line);
+    getline(readfile, line);
     int number_of_faces = atoi(line.c_str());
-    cout << number_of_faces << endl;
+    cout << number_of_faces << " faces" << endl;
     //array to store face vertices: [v1.1, v1.2, v1.3, v2.1, v2.2, v2.3, ...]
-    int *faces = new int[3 * number_of_faces];
-
-    map<int, forward_list<int>> neighbors;
+    Face *faces = new Face[number_of_faces];
 
     //skip next line
-    getline(file, line);
+    getline(readfile, line);
 
     for (int i = 0; i < number_of_faces; i++) {
-        getline(file, line);
+        getline(readfile, line);
         char buf[line.length()];
         strcpy(buf, line.c_str());
 
         int index0 = atoi(strtok(buf, delim));
         int index1 = atoi(strtok(NULL, delim));
         int index2 = atoi(strtok(NULL, delim));
-        faces[3*i] = index0;
-        faces[3*i+1] = index1;
-        faces[3*i+2] = index2;
-
-        //add indices to neighbors map. catch double added vertices?
-        neighbors[index0].push_front(index1);
-        neighbors[index0].push_front(index2);
-        neighbors[index1].push_front(index0);
-        neighbors[index1].push_front(index2);
-        neighbors[index2].push_front(index0);
-        neighbors[index2].push_front(index1);
+        faces[i].vertex0_ = &vertices[index0];
+        faces[i].vertex1_ = &vertices[index1];
+        faces[i].vertex2_ = &vertices[index2];
     }
 
-    file.close();
+    //close unit_circle.txt
+    readfile.close();
 
-    double *ksq = new double[number_of_vertices];
-    computeKSquared(vertices, delta, ksq, number_of_vertices);
-    //...
-
+    auto *ksq = new double[number_of_vertices];
+    std::ofstream fileKSQ("ksq.txt");
+    for (int i = 0; i < number_of_vertices; i++) {
+        ksq[i] = vertices[i].ksq_;
+        fileKSQ << vertices[i].x_ << " " << vertices[i].y_ << " " << ksq[i] << "\n";
+    }
+    fileKSQ.close();
 
     delete[] vertices;
     delete[] faces;
