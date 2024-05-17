@@ -1,7 +1,19 @@
 #include <iostream>
 #include <fstream>
+#include <cmath>
 #include <string>
+#include <map>
+#include <forward_list>
 #include "cstring"
+
+void computeKSquared(double *vertices, double delta, double *ksq, int number_of_vertices) {
+    double factor = 100 + delta;
+    for (int i = 0; i < number_of_vertices; i++) {
+        double x = vertices[2*i];
+        double y = vertices[2*i+1];
+        ksq[i] = factor*exp(-50*x*x+y*y) - 100;
+    }
+}
 
 int main(int argc, char* argv[]) {
     using namespace std;
@@ -48,7 +60,10 @@ int main(int argc, char* argv[]) {
     getline(file, line);
     int number_of_faces = atoi(line.c_str());
     cout << number_of_faces << endl;
+    //array to store face vertices: [v1.1, v1.2, v1.3, v2.1, v2.2, v2.3, ...]
     int *faces = new int[3 * number_of_faces];
+
+    map<int, forward_list<int>> neighbors;
 
     //skip next line
     getline(file, line);
@@ -58,19 +73,31 @@ int main(int argc, char* argv[]) {
         char buf[line.length()];
         strcpy(buf, line.c_str());
 
-        char *index0 = strtok(buf, delim);
-        char *index1 = strtok(NULL, delim);
-        char *index2 = strtok(NULL, delim);
-        faces[3*i] = atoi(index0);
-        faces[3*i+1] = atoi(index1);
-        faces[3*i+2] = atoi(index2);
+        int index0 = atoi(strtok(buf, delim));
+        int index1 = atoi(strtok(NULL, delim));
+        int index2 = atoi(strtok(NULL, delim));
+        faces[3*i] = index0;
+        faces[3*i+1] = index1;
+        faces[3*i+2] = index2;
+
+        //add indices to neighbors map. catch double added vertices?
+        neighbors[index0].push_front(index1);
+        neighbors[index0].push_front(index2);
+        neighbors[index1].push_front(index0);
+        neighbors[index1].push_front(index2);
+        neighbors[index2].push_front(index0);
+        neighbors[index2].push_front(index1);
     }
 
     file.close();
 
+    double *ksq = new double[number_of_vertices];
+    computeKSquared(vertices, delta, ksq, number_of_vertices);
     //...
 
 
     delete[] vertices;
+    delete[] faces;
+    delete[] ksq;
     return 0;
 }
