@@ -16,7 +16,38 @@ double computeKSq(double x, double y) {
     return (100 + delta)*exp(-50*(x*x+y*y)) - 100;
 }
 
-
+void rbgs(double *values, double *func, double alpha, double beta, double gamma, int ny, int nx, int rowlength) {
+    for (int iteration = 0; iteration < 100; ++iteration) {
+        for (int row = 1; row < ny; ++row) { // row is y col is x
+            for (int col = 1; col < nx; ++col) {    // nicht ueber Rand iterieren
+                if ((row + col) % 2 == 0) {
+                    // RED
+                    //std::cout << "RED" << std::endl;
+                    values[col + row * rowlength] = (1 / alpha) *
+                                                    (func[col + row * rowlength]
+                                                     + gamma * values[(col - 1) + row * rowlength]
+                                                     + gamma * values[(col + 1) + row * rowlength]
+                                                     + beta * values[col + (row - 1) * rowlength]
+                                                     + beta * values[col + (row + 1) * rowlength]);
+                }
+            }
+        }
+        for (int row = 1; row < ny; ++row) { // row is y col is x
+            for (int col = 1; col < nx; ++col) {    // nicht ueber Rand iterieren
+                if ((row + col) % 2 == 1) {
+                    // BLACK
+                    //std::cout << "BLACK" << std::endl;
+                    values[col + row * rowlength] = (1 / alpha) *
+                                                    (func[col + row * rowlength]
+                                                     + gamma * values[(col - 1) + row * rowlength]
+                                                     + gamma * values[(col + 1) + row * rowlength]
+                                                     + beta * values[col + (row - 1) * rowlength]
+                                                     + beta * values[col + (row + 1) * rowlength]);
+                }
+            }
+        }
+    }
+}
 
 int main(int argc, char* argv[]) {
     //Usage
@@ -70,6 +101,7 @@ int main(int argc, char* argv[]) {
     cout << number_of_faces << " faces" << endl;
     //array to store face vertices
     Face *faces = new Face[number_of_faces];
+    Face::delta_ = delta;
 
     //skip next line
     getline(readfile, line);
@@ -85,7 +117,6 @@ int main(int argc, char* argv[]) {
         faces[i].vertex0_ = &vertices[index0];
         faces[i].vertex1_ = &vertices[index1];
         faces[i].vertex2_ = &vertices[index2];
-        faces[i].delta_ = delta;
         faces[i].calculateStiffness();
         faces[i].calculateMass();
     }
@@ -93,11 +124,34 @@ int main(int argc, char* argv[]) {
     //close unit_circle.txt
     readfile.close();
 
+    auto *globalStiffness = new double[number_of_vertices*number_of_vertices];
+    auto *globalMass = new double[number_of_vertices*number_of_vertices];
+
     for (int i = 0; i < number_of_faces; i++) {
-        Face triangle = faces[i];
+        Face *current = &faces[i];
         // add local matrices to global
-        // ...
+        //  get indices for vertices
+        int *indices = new int[]{current->vertex0_->index_, current->vertex1_->index_, current->vertex2_->index_};
+        //  add to global matrices
+        for (int x = 0; x <= 2; x++) {
+            for (int y = 0; y <= 2; y++) {
+                globalStiffness[indices[x]+indices[y]*number_of_vertices] += current->A_[x][y];
+                globalMass[indices[x]+indices[y]*number_of_vertices] += current->M_[x][y];
+            }
+        }
     }
+
+    double ew_old;
+    double ew_new;
+
+    while(std::abs((ew_new-ew_old)/ew_old)>std::pow(10,-10)){
+        ew_old= ew_new;
+        //f=Mh*uh
+
+
+    }
+
+
 
 
     delete[] vertices;

@@ -15,16 +15,13 @@ void Face::calculateStiffness() {
     my_element(verts);
     // for local stiffness
     A_ = my_element.integrate(grad(v_())*grad(w_()) - func<double>(computeKSq)*v_()*w_());
-    // add entries from my_local_matrix to global stiffnes matrix
-    // ...
-
-
 }
 
 void Face::calculateMass() {
+    //TODO
 
     // for local mass matrix
-    //A_ = my_element.integrate(v_()*w_());
+    //M_ = my_element.integrate(v_()*w_());
     // add entries from my_local_matrix to global mass matrix
     // ...
 }
