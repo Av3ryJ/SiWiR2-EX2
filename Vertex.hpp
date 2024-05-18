@@ -10,7 +10,6 @@ public:
     int index_;
 
     Vertex() = default;
-    void computeKsq(double delta);
     void printVertex();
     double get_midpoint(double x, double y);
 };

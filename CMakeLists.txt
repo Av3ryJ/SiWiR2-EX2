@@ -3,6 +3,8 @@ project(waveguide)
 
 set(CMAKE_CXX_STANDARD 14)
 
+add_compile_options(-Wall -std=c++17 -pedantic)
+
 add_executable(waveguide
         waveguide.cpp
         Vertex.hpp
