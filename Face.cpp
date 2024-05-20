@@ -1,8 +1,10 @@
 #include "Face.hpp"
 #include "Colsamm/Colsamm.h"
 
+double Face::delta_;
+
 double Face::computeKSq(double x, double y) {
-    return (100 + Face::delta_)*exp(-50*(x*x+y*y)) - 100;
+    return (100 + delta_)*exp(-50*(x*x+y*y)) - 100;
 }
 
 void Face::calculateStiffness() {
