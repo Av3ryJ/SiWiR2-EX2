@@ -1,10 +1,12 @@
 #include "Face.hpp"
+#include "Colsamm/Colsamm.h"
 
 double Face::computeKSq(double x, double y) {
     return (100 + Face::delta_)*exp(-50*(x*x+y*y)) - 100;
 }
 
 void Face::calculateStiffness() {
+    using namespace _COLSAMM_;
     ELEMENTS::Triangle my_element;
 
     std::vector<double> verts(6, 0.0);
@@ -18,6 +20,7 @@ void Face::calculateStiffness() {
 }
 
 void Face::calculateMass() {
+    using namespace _COLSAMM_;
     ELEMENTS::Triangle my_element;
 
     std::vector<double> verts(6, 0.0);

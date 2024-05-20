@@ -2,9 +2,7 @@
 #define SIWIR2_EX2_FACE_HPP
 
 #include "Vertex.hpp"
-#include "Colsamm/Colsamm.h"
-
-using namespace _COLSAMM_;
+#include <vector>
 
 class Face {
 public:

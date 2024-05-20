@@ -8,7 +8,7 @@
 
 using namespace std;
 
-double delta = 0;
+static double delta = 0;
 
 double computeKSq(double x, double y) {
     return (100 + delta)*exp(-50*(x*x+y*y)) - 100;
@@ -55,6 +55,7 @@ int main(int argc, char* argv[]) {
     }
     //parse args
     delta = atof(argv[1]);
+    Face::delta_ = delta;
     double epsilon = atof(argv[2]);
     if (argc == 4) {
         int refLvl = atoi(argv[3]);
@@ -100,7 +101,6 @@ int main(int argc, char* argv[]) {
     cout << number_of_faces << " faces" << endl;
     //array to store face vertices
     Face *faces = new Face[number_of_faces];
-    Face::delta_ = delta;
 
     //skip next line
     getline(readfile, line);
