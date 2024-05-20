@@ -8,7 +8,6 @@
 #include "Face.hpp"
 
 using namespace std;
-using namespace ::_COLSAMM_;
 
 double delta = 0;
 
@@ -82,7 +81,7 @@ int main(int argc, char* argv[]) {
     char delim[] = " ";
     for (int i = 0; i < number_of_vertices; i++) {
         getline(readfile, line);
-        char buf[line.length()];
+        char *buf = new char[line.length()];
         strcpy(buf, line.c_str());
 
         char *index = strtok(buf, delim);
@@ -93,6 +92,7 @@ int main(int argc, char* argv[]) {
         vertices[i].index_ = atoi(index);
         ksq[i] = computeKSq(x, y);
         fileKSQ << x << " " << y << " " << ksq[i] << "\n";
+        delete[] buf;
     }
     fileKSQ.close();
 
@@ -101,14 +101,13 @@ int main(int argc, char* argv[]) {
     cout << number_of_faces << " faces" << endl;
     //array to store face vertices
     Face *faces = new Face[number_of_faces];
-    Face::delta_ = delta;
 
     //skip next line
     getline(readfile, line);
 
     for (int i = 0; i < number_of_faces; i++) {
         getline(readfile, line);
-        char buf[line.length()];
+        char *buf = new char[line.length()];
         strcpy(buf, line.c_str());
 
         int index0 = atoi(strtok(buf, delim));
@@ -119,6 +118,8 @@ int main(int argc, char* argv[]) {
         faces[i].vertex2_ = &vertices[index2];
         faces[i].calculateStiffness();
         faces[i].calculateMass();
+        Face::delta_ = delta;
+        delete[] buf;
     }
 
     //close unit_circle.txt
@@ -137,6 +138,20 @@ int main(int argc, char* argv[]) {
             for (int y = 0; y <= 2; y++) {
                 globalStiffness[indices[x]+indices[y]*number_of_vertices] += current->A_[x][y];
                 globalMass[indices[x]+indices[y]*number_of_vertices] += current->M_[x][y];
+            }
+        }
+    }
+
+    std::ofstream fileA("A.txt");
+    std::ofstream fileM("M.txt");
+
+    for (int x = 0; x < number_of_vertices; x++) {
+        for (int y = 0; y < number_of_vertices; y++) {
+            if (globalStiffness[x + y * number_of_vertices] != 0) {
+                fileA << x << " " << y << " " << globalStiffness[x + y * number_of_vertices] << std::endl;
+            }
+            if (globalMass[x + y * number_of_vertices] != 0) {
+                fileM << x << " " << y << " " << globalMass[x + y * number_of_vertices] << std::endl;
             }
         }
     }

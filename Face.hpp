@@ -4,7 +4,7 @@
 #include "Vertex.hpp"
 #include "Colsamm/Colsamm.h"
 
-using namespace ::_COLSAMM_;
+using namespace _COLSAMM_;
 
 class Face {
 public:
