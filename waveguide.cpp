@@ -3,7 +3,6 @@
 #include <cmath>
 #include <string>
 #include "cstring"
-#include "Colsamm/Colsamm.h"
 #include "Vertex.hpp"
 #include "Face.hpp"
 
@@ -101,6 +100,7 @@ int main(int argc, char* argv[]) {
     cout << number_of_faces << " faces" << endl;
     //array to store face vertices
     Face *faces = new Face[number_of_faces];
+    Face::delta_ = delta;
 
     //skip next line
     getline(readfile, line);
@@ -118,7 +118,6 @@ int main(int argc, char* argv[]) {
         faces[i].vertex2_ = &vertices[index2];
         faces[i].calculateStiffness();
         faces[i].calculateMass();
-        Face::delta_ = delta;
         delete[] buf;
     }
 
@@ -132,7 +131,7 @@ int main(int argc, char* argv[]) {
         Face *current = &faces[i];
         // add local matrices to global
         //  get indices for vertices
-        int *indices = new int[]{current->vertex0_->index_, current->vertex1_->index_, current->vertex2_->index_};
+        int *indices = new int[3]{current->vertex0_->index_, current->vertex1_->index_, current->vertex2_->index_};
         //  add to global matrices
         for (int x = 0; x <= 2; x++) {
             for (int y = 0; y <= 2; y++) {
