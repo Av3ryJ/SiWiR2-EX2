@@ -55,7 +55,9 @@ int main(int argc, char* argv[]) {
     }
     //parse args
     delta = atof(argv[1]);
+    //setting delta for all Faces
     Face::delta_ = delta;
+
     double epsilon = atof(argv[2]);
     if (argc == 4) {
         int refLvl = atoi(argv[3]);
@@ -99,6 +101,7 @@ int main(int argc, char* argv[]) {
     getline(readfile, line);
     int number_of_faces = atoi(line.c_str());
     cout << number_of_faces << " faces" << endl;
+
     //array to store face vertices
     Face *faces = new Face[number_of_faces];
 
@@ -141,8 +144,8 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    std::ofstream fileA("A.txt");
-    std::ofstream fileM("M.txt");
+    std::ofstream fileA("../A.txt");
+    std::ofstream fileM("../M.txt");
 
     for (int x = 0; x < number_of_vertices; x++) {
         for (int y = 0; y < number_of_vertices; y++) {
@@ -155,7 +158,10 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    double ew_old;
+    fileA.close();
+    fileM.close();
+
+    double ew_old = 0;
     double ew_new;
 
     while(std::abs((ew_new-ew_old)/ew_old)>std::pow(10,-10)){
