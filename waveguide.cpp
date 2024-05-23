@@ -14,37 +14,46 @@ double computeKSq(double x, double y) {
     return (100 + delta)*exp(-50*(x*x+y*y)) - 100;
 }
 
-void rbgs(double *values, double *func, double alpha, double beta, double gamma, int ny, int nx, int rowlength) {
-    for (int iteration = 0; iteration < 100; ++iteration) {
-        for (int row = 1; row < ny; ++row) { // row is y col is x
-            for (int col = 1; col < nx; ++col) {    // nicht ueber Rand iterieren
-                if ((row + col) % 2 == 0) {
-                    // RED
-                    //std::cout << "RED" << std::endl;
-                    values[col + row * rowlength] = (1 / alpha) *
-                                                    (func[col + row * rowlength]
-                                                     + gamma * values[(col - 1) + row * rowlength]
-                                                     + gamma * values[(col + 1) + row * rowlength]
-                                                     + beta * values[col + (row - 1) * rowlength]
-                                                     + beta * values[col + (row + 1) * rowlength]);
-                }
-            }
-        }
-        for (int row = 1; row < ny; ++row) { // row is y col is x
-            for (int col = 1; col < nx; ++col) {    // nicht ueber Rand iterieren
-                if ((row + col) % 2 == 1) {
-                    // BLACK
-                    //std::cout << "BLACK" << std::endl;
-                    values[col + row * rowlength] = (1 / alpha) *
-                                                    (func[col + row * rowlength]
-                                                     + gamma * values[(col - 1) + row * rowlength]
-                                                     + gamma * values[(col + 1) + row * rowlength]
-                                                     + beta * values[col + (row - 1) * rowlength]
-                                                     + beta * values[col + (row + 1) * rowlength]);
-                }
-            }
+void matrixVectorMultiplication(double *matrix, double *vector, double *result, int length) {
+    for (int row = 0; row < length; row++) {
+        for (int col = 0; col < length; col++) {
+            result[row] += matrix[row * length + col] * vector[col];
         }
     }
+}
+
+void printVector(double *vec, int len) {
+    for (int i = 0; i < len; i++) {
+        cout << vec[i] << "  ;  ";
+    }
+    cout << endl << endl;
+}
+
+void solver(double *u, double *f, double *matrix, int length, double epsilon) {
+    double residual = 0;
+    auto *residual_vector = new double[length];
+    int max_iter = 100, counter = 0;
+    do {
+        for (int row = 0; row < length; ++row) { // row is y col is x
+            double sum = f[row];
+            int row_index = row * length;
+            for (int col = 0; col < length; ++col) {
+                if (col != row) {
+                    sum -= matrix[row_index + col] * u[col];
+                }
+            }
+            u[row] = sum / matrix[row_index + row]; // u[i] = f[i] - a1*u1 - a2*u2 ...
+        }
+        matrixVectorMultiplication(matrix, u, residual_vector, length);
+        for (int i = 0; i < length; i++) {
+            double temp = f[i] - residual_vector[i];
+            residual += temp*temp;
+        }
+        residual = sqrt(residual / length);
+
+    } while (residual > epsilon && ++counter <= max_iter);
+
+    delete[] residual_vector;
 }
 
 int main(int argc, char* argv[]) {
@@ -78,7 +87,7 @@ int main(int argc, char* argv[]) {
     auto *vertices = new Vertex[number_of_vertices];
 
     auto *ksq = new double[number_of_vertices];
-    std::ofstream fileKSQ("ksq.txt");
+    std::ofstream fileKSQ("../ksq.txt");
 
     char delim[] = " ";
     for (int i = 0; i < number_of_vertices; i++) {
@@ -161,21 +170,64 @@ int main(int argc, char* argv[]) {
     fileA.close();
     fileM.close();
 
-    double ew_old = 0;
-    double ew_new;
+    // eigenvalue
+    double ew_old = 1., ew_new = 0.;
+    // init eigenmode
+    auto *u = new double[number_of_vertices];
+    for (int i = 0; i < number_of_vertices; i++) {
+        u[i] = 0.5;
+    }
+    // to store Mh * uh
+    auto *f = new double[number_of_vertices];
 
-    while(std::abs((ew_new-ew_old)/ew_old)>std::pow(10,-10)){
+    int c = 0;
+
+    while(std::abs((ew_new-ew_old)/ew_old)>std::pow(10,-10) && ++c <= 30){
         ew_old= ew_new;
         //f=Mh*uh
+        matrixVectorMultiplication(globalMass, u, f, number_of_vertices);
+        //solver
+        solver(u, f, globalStiffness, number_of_vertices, epsilon);
 
+        // normalize uh
+        double norm = 0;
+        for (int i = 0; i < number_of_vertices; i++) {
+            norm += u[i]*u[i];
+        }
+        norm = sqrt(norm);
+        for (int i = 0; i < number_of_vertices; i++) {
+            u[i] = u[i] / norm;
+        }
+        //printVector(u, 10);
 
+        // compute new eigenvalue
+        auto *Au = new double[number_of_vertices];
+        auto *Mu = new double[number_of_vertices];
+        matrixVectorMultiplication(globalStiffness, u, Au, number_of_vertices);
+        matrixVectorMultiplication(globalMass, u, Mu, number_of_vertices);
+        double Au_sum = 0, Mu_sum = 0;
+        for (int i = 0; i < number_of_vertices; i++) {
+            Au_sum += u[i] * Au[i];
+            Mu_sum += u[i] * Mu[i];
+        }
+        ew_new = Au_sum / Mu_sum;
+
+        delete[] Au;
+        delete[] Mu;
     }
 
+    std::ofstream fileEigenmode("../eigenmode.txt");
 
+    for (int i = 0; i < number_of_vertices; i++) {
+        fileEigenmode << vertices[i].x_ << " " << vertices[i].y_ << " " << u[i] << std::endl;
+    }
 
+    fileEigenmode.close();
 
     delete[] vertices;
     delete[] faces;
     delete[] ksq;
+    delete[] u;
+    delete[] f;
     return 0;
 }
