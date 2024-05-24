@@ -67,9 +67,10 @@ int main(int argc, char* argv[]) {
     //setting delta for all Faces
     Face::delta_ = delta;
 
+    int refLvl = 0;
     double epsilon = atof(argv[2]);
     if (argc == 4) {
-        int refLvl = atoi(argv[3]);
+        refLvl = atoi(argv[3]);
     }
 
     //input stream from readfile
@@ -84,7 +85,7 @@ int main(int argc, char* argv[]) {
     getline(readfile, line);
 
     // array to store vertices
-    auto *vertices = new Vertex[number_of_vertices];
+    std::vector<Vertex> vertices;
 
     auto *ksq = new double[number_of_vertices];
     std::ofstream fileKSQ("../ksq.txt");
@@ -98,9 +99,8 @@ int main(int argc, char* argv[]) {
         char *index = strtok(buf, delim);
         double x = atof(strtok(NULL, delim));
         double y = atof(strtok(NULL, delim));
-        vertices[i].x_ = x;
-        vertices[i].y_ = y;
-        vertices[i].index_ = atoi(index);
+        int iindex = atoi(index);
+        vertices.push_back(*(new Vertex(x, y, iindex)));
         ksq[i] = computeKSq(x, y);
         fileKSQ << x << " " << y << " " << ksq[i] << "\n";
         delete[] buf;
@@ -112,7 +112,7 @@ int main(int argc, char* argv[]) {
     cout << number_of_faces << " faces" << endl;
 
     //array to store face vertices
-    Face *faces = new Face[number_of_faces];
+    std::vector<Face> faces;
 
     //skip next line
     getline(readfile, line);
@@ -125,16 +125,24 @@ int main(int argc, char* argv[]) {
         int index0 = atoi(strtok(buf, delim));
         int index1 = atoi(strtok(NULL, delim));
         int index2 = atoi(strtok(NULL, delim));
-        faces[i].vertex0_ = &vertices[index0];
-        faces[i].vertex1_ = &vertices[index1];
-        faces[i].vertex2_ = &vertices[index2];
-        faces[i].calculateStiffness();
-        faces[i].calculateMass();
+        faces.push_back(*(new Face(&vertices[index0],
+                                   &vertices[index1],
+                                   &vertices[index2])));
         delete[] buf;
     }
 
     //close unit_circle.txt
     readfile.close();
+
+    //refine
+    int new_number_of_vertices = number_of_vertices;
+    int new_number_of_faces = number_of_faces;
+    for (int r = 0; r < refLvl; r++) {
+        new_number_of_vertices *= 3;
+        new_number_of_faces *= 4;
+
+
+    }
 
     auto *globalStiffness = new double[number_of_vertices*number_of_vertices];
     auto *globalMass = new double[number_of_vertices*number_of_vertices];
@@ -151,6 +159,7 @@ int main(int argc, char* argv[]) {
                 globalMass[indices[x]+indices[y]*number_of_vertices] += current->M_[x][y];
             }
         }
+        delete[] indices;
     }
 
     std::ofstream fileA("../A.txt");
@@ -224,8 +233,10 @@ int main(int argc, char* argv[]) {
 
     fileEigenmode.close();
 
-    delete[] vertices;
-    delete[] faces;
+    vertices.clear();
+    faces.clear();
+    delete[] globalStiffness;
+    delete[] globalMass;
     delete[] ksq;
     delete[] u;
     delete[] f;

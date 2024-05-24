@@ -3,6 +3,15 @@
 
 double Face::delta_;
 
+Face::Face(Vertex *vertex0, Vertex *vertex1, Vertex *vertex2) {
+    vertex0_ = vertex0;
+    vertex1_ = vertex1;
+    vertex2_ = vertex2;
+
+    calculateStiffness();
+    calculateMass();
+}
+
 double Face::computeKSq(double x, double y) {
     return (100 + delta_)*exp(-50*(x*x+y*y)) - 100;
 }

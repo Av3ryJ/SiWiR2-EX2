@@ -11,6 +11,7 @@ public:
     static double delta_;
 
     Face() = default;
+    Face(Vertex *vertex0, Vertex *vertex1, Vertex *vertex2);
 
     static double computeKSq(double x, double y);
     void calculateStiffness();

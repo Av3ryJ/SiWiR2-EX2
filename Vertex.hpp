@@ -10,8 +10,8 @@ public:
     int index_;
 
     Vertex() = default;
+    Vertex(double x, double y, int index);
     void printVertex();
-    double get_midpoint(double x, double y);
 };
 
 #endif //SIWIR2_EX2_VERTEX_HPP
