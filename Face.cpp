@@ -43,3 +43,10 @@ void Face::calculateMass() {
     // for local stiffness
     M_ = my_element.integrate(v_()*w_());
 }
+/*
+ * This function will split this Face into 4 smaller ones by taking the midpoints of the 3 edges as new Vertices
+ * and constructing 4 smaller Faces
+ */
+void Face::refine(std::vector<Face> &faces, std::vector<Vertex> &vertices, int own_index) {
+
+}

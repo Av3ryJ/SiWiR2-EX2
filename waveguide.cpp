@@ -42,7 +42,7 @@ void solver(double *u, double *f, double *matrix, int length, double epsilon) {
                     sum -= matrix[row_index + col] * u[col];
                 }
             }
-            u[row] = sum / matrix[row_index + row]; // u[i] = f[i] - a1*u1 - a2*u2 ...
+            u[row] = sum / matrix[row_index + row]; // u[i] = 1/aii * (f[i] - a1*u1 - a2*u2 ...)
         }
         matrixVectorMultiplication(matrix, u, residual_vector, length);
         for (int i = 0; i < length; i++) {
@@ -97,8 +97,8 @@ int main(int argc, char* argv[]) {
         strcpy(buf, line.c_str());
 
         char *index = strtok(buf, delim);
-        double x = atof(strtok(NULL, delim));
-        double y = atof(strtok(NULL, delim));
+        double x = atof(strtok(nullptr, delim));
+        double y = atof(strtok(nullptr, delim));
         int iindex = atoi(index);
         vertices.push_back(*(new Vertex(x, y, iindex)));
         ksq[i] = computeKSq(x, y);
@@ -135,32 +135,51 @@ int main(int argc, char* argv[]) {
     readfile.close();
 
     //refine
-    int new_number_of_vertices = number_of_vertices;
-    int new_number_of_faces = number_of_faces;
-    for (int r = 0; r < refLvl; r++) {
-        new_number_of_vertices *= 3;
-        new_number_of_faces *= 4;
-
-
+    std::cout << "starting to refine" << std::endl;
+    int b = 0;
+    for (Face &face: faces) {
+        std::cout << "All vertex indices: " << face.vertex0_->index_  << " ; " << face.vertex1_->index_ << " ; " << face.vertex2_->index_ << std::endl;
+        face.vertex0_->getMidpoint(face.vertex1_, vertices);
+        face.vertex0_->getMidpoint(face.vertex2_, vertices);
+        face.vertex1_->getMidpoint(face.vertex2_, vertices);
+        std::cout << "b: " << b << "; Total number of Vertices " << vertices.size() << std::endl;
+        b++;
     }
+
+    std::cout << "starting to populate global mats..." << std::endl;
 
     auto *globalStiffness = new double[number_of_vertices*number_of_vertices];
     auto *globalMass = new double[number_of_vertices*number_of_vertices];
 
-    for (int i = 0; i < number_of_faces; i++) {
-        Face *current = &faces[i];
+    std::cout << "faces len = " << faces.size() << std::endl;
+    std::cout << "vertices len = " << vertices.size() << std::endl;
+
+    int n = 0;
+    for (Face &current : faces) {
+        std::cout << "getting from face " << n << std::endl;
+        n++;
         // add local matrices to global
-        //  get indices for vertices
-        int *indices = new int[3]{current->vertex0_->index_, current->vertex1_->index_, current->vertex2_->index_};
+        // get indices for vertices
+        int index0 = current.vertex0_->index_;
+        int index1 = current.vertex1_->index_;
+        int index2 = current.vertex2_->index_;
+        std::cout << "singe ints: " << index0 << " " << index1 << " " << index2 << std::endl;
+        int *indices = new int[]{index0, index1, index2};
+        std::cout << current.vertex0_->index_ << std::endl;
+        std::cout << current.vertex1_->index_ << std::endl;
+        std::cout << current.vertex2_->index_ << std::endl;
+        std::cout << "indices of " << n << " : " << indices[0] << " " << indices[1] << " " << indices[2] << std::endl;
         //  add to global matrices
         for (int x = 0; x <= 2; x++) {
             for (int y = 0; y <= 2; y++) {
-                globalStiffness[indices[x]+indices[y]*number_of_vertices] += current->A_[x][y];
-                globalMass[indices[x]+indices[y]*number_of_vertices] += current->M_[x][y];
+                globalStiffness[indices[x]+indices[y]*number_of_vertices] += current.A_[x][y];
+                globalMass[indices[x]+indices[y]*number_of_vertices] += current.M_[x][y];
             }
         }
         delete[] indices;
     }
+
+    std::cout << "Finished to polutlate global mats. Writing to files..." << std::endl;
 
     std::ofstream fileA("../A.txt");
     std::ofstream fileM("../M.txt");
@@ -178,6 +197,8 @@ int main(int argc, char* argv[]) {
 
     fileA.close();
     fileM.close();
+
+    std::cout << "finished writing A.txt and M.txt. Starting eigenmode calculation..." << std::endl;
 
     // eigenvalue
     double ew_old = 1., ew_new = 0.;
@@ -232,6 +253,13 @@ int main(int argc, char* argv[]) {
     }
 
     fileEigenmode.close();
+
+    for (int i = 0; i < number_of_vertices; i++) {
+        delete &vertices[i];
+    }
+    for (int i = 0; i < number_of_faces; i++) {
+        delete &faces[i];
+    }
 
     vertices.clear();
     faces.clear();
