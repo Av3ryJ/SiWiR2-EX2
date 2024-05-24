@@ -12,6 +12,15 @@ Face::Face(Vertex *vertex0, Vertex *vertex1, Vertex *vertex2) {
     calculateMass();
 }
 
+Face::Face(int index0, int index1, int index2, std::vector<Vertex> vertices) {
+    vertex0_ = &vertices[index0];
+    vertex1_ = &vertices[index1];
+    vertex2_ = &vertices[index2];
+
+    calculateStiffness();
+    calculateMass();
+}
+
 double Face::computeKSq(double x, double y) {
     return (100 + delta_)*exp(-50*(x*x+y*y)) - 100;
 }
@@ -43,10 +52,4 @@ void Face::calculateMass() {
     // for local stiffness
     M_ = my_element.integrate(v_()*w_());
 }
-/*
- * This function will split this Face into 4 smaller ones by taking the midpoints of the 3 edges as new Vertices
- * and constructing 4 smaller Faces
- */
-void Face::refine(std::vector<Face> &faces, std::vector<Vertex> &vertices, int own_index) {
 
-}

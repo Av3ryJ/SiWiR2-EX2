@@ -10,6 +10,7 @@ public:
     static double delta_;
 
     Face(Vertex *vertex0, Vertex *vertex1, Vertex *vertex2);
+    Face(int index0, int index1, int index2, std::vector<Vertex> vertices);
 
     static double computeKSq(double x, double y);
     void calculateStiffness();
