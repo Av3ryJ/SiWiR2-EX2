@@ -134,11 +134,23 @@ int main(int argc, char* argv[]) {
     //close unit_circle.txt
     readfile.close();
 
-    //refine
-    std::cout << "starting to refine" << std::endl;
+    // ================== Finished reading in inputs ==================
 
+// this code snipped can be used to print out the net for validation
+//    std::ofstream fileV("../Vertices.txt");
+//    for (Vertex &ver : vertices) {
+//        fileV << ver.index_ << " " << ver.x_ << " " << ver.y_ << std::endl;
+//    }
+//    fileV.close();
+//
+//    std::ofstream fileF("../Faces.txt");
+//    for (Face &fa : faces) {
+//        fileF << fa.vertex0_->index_ << " " << fa.vertex1_->index_ << " " << fa.vertex2_->index_ << " " << std::endl;
+//    }
+//    fileF.close();
+
+    //refine (this is not pretty, but it works :/)
     for (int refinement = 0; refinement < refLvl; refinement++) {
-        std::cout << "refining level: " << refinement+1 << std::endl;
         std::vector<Vertex> new_vertices = vertices;
 
         std::vector<std::vector<int>> saved_faces;
@@ -146,15 +158,11 @@ int main(int argc, char* argv[]) {
         Vertex *midpoint0;
         Vertex *midpoint1;
         Vertex *midpoint2;
-        std::cout << "iterating faces: " << faces.size() << std::endl;
-        int b = 0;
+
         for (Face &face: faces) {
-            //if (b > 7000) std::cout << b << std::endl;
-            b++;
             midpoint0 = face.vertex0_->getMidpoint(face.vertex1_, new_vertices);
             midpoint1 = face.vertex0_->getMidpoint(face.vertex2_, new_vertices);
             midpoint2 = face.vertex1_->getMidpoint(face.vertex2_, new_vertices);
-            //std::cout << midpoint0->index_ << " " << midpoint1->index_ << " " << midpoint2->index_ << std::endl;
             std::vector<int> temp0 = {face.vertex0_->index_, midpoint0->index_, midpoint1->index_};
             std::vector<int> temp1 = {midpoint0->index_, face.vertex1_->index_, midpoint2->index_};
             std::vector<int> temp2 = {midpoint0->index_, midpoint1->index_, midpoint2->index_};
@@ -164,39 +172,41 @@ int main(int argc, char* argv[]) {
             saved_faces.push_back(temp2);
             saved_faces.push_back(temp3);
         }
-        std::cout << "faces iterated over" << std::endl;
         vertices = new_vertices;
+        new_vertices.clear();
         number_of_vertices = (int) vertices.size();
         for (Vertex ver : vertices) {
             ver.midpoints_.clear();
         }
-        std::cout << "number of faces to create after " << refinement << " steps: " << saved_faces.size() << std::endl;
         std::vector<Face> new_faces;
         new_faces.reserve(saved_faces.size());
         for (std::vector s_face: saved_faces) {
-            std::cout << "index0 " << s_face[0] << " index1 " << s_face[1] << " index2 " << s_face[2] << std::endl;
             new_faces.push_back(*new Face(&vertices[s_face[0]], &vertices[s_face[1]], &vertices[s_face[2]]));
         }
         faces = new_faces;
+        new_faces.clear();
         number_of_faces = (int) faces.size();
     }
 
-    std::cout << "starting to populate global mats..." << std::endl;
+// this code snipped can be used to print out the refined net for validation
+//    std::ofstream fileVR("../Vertices_Refined.txt");
+//    for (Vertex &ver : vertices) {
+//        fileVR << ver.index_ << " " << ver.x_ << " " << ver.y_ << std::endl;
+//    }
+//    fileVR.close();
+//
+//    std::ofstream fileFR("../Faces_refined.txt");
+//    for (Face &fa : faces) {
+//        fileFR << fa.vertex0_->index_ << " " << fa.vertex1_->index_ << " " << fa.vertex2_->index_ << " " << std::endl;
+//    }
+//    fileFR.close();
+
 
     auto *globalStiffness = new double[number_of_vertices*number_of_vertices];
     auto *globalMass = new double[number_of_vertices*number_of_vertices];
 
-    std::cout << "faces len = " << faces.size() << std::endl;
-    std::cout << "vertices len = " << vertices.size() << std::endl;
-
-    int n = 0;
     for (Face &current : faces) {
-        n++;
-        std::cout << n << std::endl;
-        // add local matrices to global
-        // get indices for vertices
         int *indices = new int[3]{current.vertex0_->index_, current.vertex1_->index_, current.vertex2_->index_};
-        std::cout << indices[0] << " " << indices[1] << " " << indices[2] << std::endl;
         //  add to global matrices
         for (int x = 0; x <= 2; x++) {
             for (int y = 0; y <= 2; y++) {
@@ -206,8 +216,6 @@ int main(int argc, char* argv[]) {
         }
         delete[] indices;
     }
-
-    std::cout << "Finished to polutlate global mats. Writing to files..." << std::endl;
 
     std::ofstream fileA("../A.txt");
     std::ofstream fileM("../M.txt");
@@ -225,8 +233,6 @@ int main(int argc, char* argv[]) {
 
     fileA.close();
     fileM.close();
-
-    std::cout << "finished writing A.txt and M.txt. Starting eigenmode calculation..." << std::endl;
 
     // eigenvalue
     double ew_old = 1., ew_new = 0.;
