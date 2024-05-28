@@ -14,10 +14,10 @@ double computeKSq(double x, double y) {
     return (100 + delta)*exp(-50*(x*x+y*y)) - 100;
 }
 
-void matrixVectorMultiplication(double *matrix, double *vector, double *result, int length) {
+void matrixVectorMultiplication(std::vector<std::map<int, double>> matrix, double *vector, double *result, int length) {
     for (int row = 0; row < length; row++) {
-        for (int col = 0; col < length; col++) {
-            result[row] += matrix[row * length + col] * vector[col];
+        for (auto col: matrix[row]) {
+            result[row] += col.second * vector[col.first];
         }
     }
 }
@@ -29,7 +29,10 @@ void printVector(double *vec, int len) {
     cout << endl << endl;
 }
 
-void solver(double *u, double *f, double *matrix, int length, double epsilon) {
+void solver(double *u, double *f, std::vector<std::map<int, double>> globalStiffness, int length, double epsilon) {
+    // solver so umschreiben, dass er auf diese sparse Matrix mit der Map angewendet werden kann 
+    //-> mit auto über die inhalte iterieren oder so 
+
     double residual = 0;
     auto *residual_vector = new double[length];
     int max_iter = 100, counter = 0;
@@ -37,14 +40,14 @@ void solver(double *u, double *f, double *matrix, int length, double epsilon) {
         for (int row = 0; row < length; ++row) { // row is y col is x
             double sum = f[row];
             int row_index = row * length;
-            for (int col = 0; col < length; ++col) {
-                if (col != row) {
-                    sum -= matrix[row_index + col] * u[col];
+            for (auto i: globalStiffness[row] ) {// hier über map iterieren - col = 1. wert der Map, matrix[] = 2. Wert der map 
+                if (i.first != row) {
+                    sum -= i.second * u[i.first];
                 }
             }
-            u[row] = sum / matrix[row_index + row]; // u[i] = 1/aii * (f[i] - ai1*u1 - a2*ui2 ...)
+            u[row] = sum / globalStiffness[row][row]; // u[i] = 1/aii * (f[i] - ai1*u1 - a2*ui2 ...) TODO: Zugriff ändern 
         }
-        matrixVectorMultiplication(matrix, u, residual_vector, length);
+        matrixVectorMultiplication(globalStiffness, u, residual_vector, length);
         for (int i = 0; i < length; i++) {
             double temp = f[i] - residual_vector[i];
             residual += temp*temp;
@@ -202,16 +205,18 @@ int main(int argc, char* argv[]) {
 //    fileFR.close();
 
 
-    auto *globalStiffness = new double[number_of_vertices*number_of_vertices];
-    auto *globalMass = new double[number_of_vertices*number_of_vertices];
+    std::map<int, double> leer; //muss man anscheinend mitübergeben 
+    std::vector<std::map<int, double>> globalStiffness(number_of_vertices, leer);
+    std::vector<std::map<int, double>> globalMass(number_of_vertices, leer);
+
 
     for (Face &current : faces) {
         int *indices = new int[3]{current.vertex0_->index_, current.vertex1_->index_, current.vertex2_->index_};
         //  add to global matrices
         for (int x = 0; x <= 2; x++) {
             for (int y = 0; y <= 2; y++) {
-                globalStiffness[indices[x]+indices[y]*number_of_vertices] += current.A_[x][y];
-                globalMass[indices[x]+indices[y]*number_of_vertices] += current.M_[x][y];
+                globalStiffness[indices[x]][indices[y]] += current.A_[x][y];
+                globalMass[indices[x]][indices[y]]+=current.M_[x][y];
             }
         }
         delete[] indices;
@@ -223,10 +228,10 @@ int main(int argc, char* argv[]) {
     for (int x = 0; x < number_of_vertices; x++) {
         for (int y = 0; y < number_of_vertices; y++) {
             if (globalStiffness[x + y * number_of_vertices] != 0) {
-                fileA << x << " " << y << " " << globalStiffness[x + y * number_of_vertices] << std::endl;
+                fileA << x << " " << y << " " << globalStiffness[x + y * number_of_vertices] << std::endl; //TODO: 
             }
             if (globalMass[x + y * number_of_vertices] != 0) {
-                fileM << x << " " << y << " " << globalMass[x + y * number_of_vertices] << std::endl;
+                fileM << x << " " << y << " " << globalMass[x + y * number_of_vertices] << std::endl; //TODO
             }
         }
     }
@@ -297,8 +302,8 @@ int main(int argc, char* argv[]) {
 
     vertices.clear();
     faces.clear();
-    delete[] globalStiffness;
-    delete[] globalMass;
+    delete[] globalStiffness; //TODO
+    delete[] globalMass; //TODO
     delete[] ksq;
     delete[] u;
     delete[] f;
