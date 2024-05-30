@@ -1,4 +1,6 @@
+#include <iomanip>
 #include <iostream>
+#include <limits>
 #include <fstream>
 #include <cmath>
 #include <string>
@@ -22,41 +24,31 @@ void matrixVectorMultiplication(std::vector<std::map<int, double>> matrix, doubl
     }
 }
 
-void printVector(double *vec, int len) {
-    for (int i = 0; i < len; i++) {
-        cout << vec[i] << "  ;  ";
-    }
-    cout << endl << endl;
-}
-
 void solver(double *u, double *f, std::vector<std::map<int, double>> globalStiffness, int length, double epsilon) {
-    // solver so umschreiben, dass er auf diese sparse Matrix mit der Map angewendet werden kann 
-    //-> mit auto über die inhalte iterieren oder so 
-
-    double residual = 0;
-    auto *residual_vector = new double[length];
-    int max_iter = 100, counter = 0;
+    double residual;
     do {
-        for (int row = 0; row < length; ++row) { // row is y col is x
+        residual = 0;
+        // Gauss-Seidel
+        for (int row = 0; row < length; ++row) {
             double sum = f[row];
-            int row_index = row * length;
-            for (auto i: globalStiffness[row] ) {// hier über map iterieren - col = 1. wert der Map, matrix[] = 2. Wert der map 
+            for (auto i: globalStiffness[row] ) {
                 if (i.first != row) {
                     sum -= i.second * u[i.first];
                 }
             }
-            u[row] = sum / globalStiffness[row][row]; // u[i] = 1/aii * (f[i] - ai1*u1 - a2*ui2 ...) TODO: Zugriff ändern 
+            u[row] = sum / globalStiffness[row][row]; // u[i] = 1/aii * (f[i] - ai1*u1 - a2*ui2 ..)
         }
+
+        // residual
+        auto *residual_vector = new double[length]{};
         matrixVectorMultiplication(globalStiffness, u, residual_vector, length);
         for (int i = 0; i < length; i++) {
             double temp = f[i] - residual_vector[i];
             residual += temp*temp;
         }
         residual = sqrt(residual / length);
-
-    } while (residual > epsilon && ++counter <= max_iter);
-
-    delete[] residual_vector;
+        delete[] residual_vector;
+    } while (residual > epsilon);
 }
 
 int main(int argc, char* argv[]) {
@@ -65,7 +57,7 @@ int main(int argc, char* argv[]) {
         cout << "Usage: ./waveguide <delta> <epsilon> [<refLvl>]" << endl;
         return -1;
     }
-    //parse args
+    // ================== parse args ==================
     delta = atof(argv[1]);
     //setting delta for all Faces
     Face::delta_ = delta;
@@ -76,13 +68,13 @@ int main(int argc, char* argv[]) {
         refLvl = atoi(argv[3]);
     }
 
+    // ================== read vertices and faces from input file ==================
     //input stream from readfile
-    ifstream readfile("../unit_circle.txt");
+    ifstream readfile("./unit_circle.txt");
 
     string line;
     getline(readfile, line);
     int number_of_vertices = atoi(line.c_str());    // get number of vertices from first line
-    cout << number_of_vertices << " vertices" << endl;
 
     //skip second line
     getline(readfile, line);
@@ -90,8 +82,7 @@ int main(int argc, char* argv[]) {
     // array to store vertices
     std::vector<Vertex> vertices;
 
-    auto *ksq = new double[number_of_vertices];
-    std::ofstream fileKSQ("../ksq.txt");
+    std::ofstream fileKSQ("./ksq.txt");
 
     char delim[] = " ";
     for (int i = 0; i < number_of_vertices; i++) {
@@ -104,15 +95,14 @@ int main(int argc, char* argv[]) {
         double y = atof(strtok(nullptr, delim));
         int iindex = atoi(index);
         vertices.push_back(*(new Vertex(x, y, iindex)));
-        ksq[i] = computeKSq(x, y);
-        fileKSQ << x << " " << y << " " << ksq[i] << "\n";
+        double ksq = computeKSq(x, y);
+        fileKSQ << x << " " << y << " " << ksq << "\n";
         delete[] buf;
     }
     fileKSQ.close();
 
     getline(readfile, line);
     int number_of_faces = atoi(line.c_str());
-    cout << number_of_faces << " faces" << endl;
 
     //array to store face vertices
     std::vector<Face> faces;
@@ -140,18 +130,19 @@ int main(int argc, char* argv[]) {
     // ================== Finished reading in inputs ==================
 
 // this code snipped can be used to print out the net for validation
-//    std::ofstream fileV("../Vertices.txt");
+//    std::ofstream fileV("./Vertices.txt");
 //    for (Vertex &ver : vertices) {
 //        fileV << ver.index_ << " " << ver.x_ << " " << ver.y_ << std::endl;
 //    }
 //    fileV.close();
 //
-//    std::ofstream fileF("../Faces.txt");
+//    std::ofstream fileF("./Faces.txt");
 //    for (Face &fa : faces) {
 //        fileF << fa.vertex0_->index_ << " " << fa.vertex1_->index_ << " " << fa.vertex2_->index_ << " " << std::endl;
 //    }
 //    fileF.close();
 
+    // ================== refinement ==================
     //refine (this is not pretty, but it works :/)
     for (int refinement = 0; refinement < refLvl; refinement++) {
         std::vector<Vertex> new_vertices = vertices;
@@ -175,12 +166,16 @@ int main(int argc, char* argv[]) {
             saved_faces.push_back(temp2);
             saved_faces.push_back(temp3);
         }
+
+        //prepare for (possible) next iteration
         vertices = new_vertices;
         new_vertices.clear();
         number_of_vertices = (int) vertices.size();
         for (Vertex ver : vertices) {
             ver.midpoints_.clear();
         }
+
+        //create new faces
         std::vector<Face> new_faces;
         new_faces.reserve(saved_faces.size());
         for (std::vector s_face: saved_faces) {
@@ -192,23 +187,23 @@ int main(int argc, char* argv[]) {
     }
 
 // this code snipped can be used to print out the refined net for validation
-//    std::ofstream fileVR("../Vertices_Refined.txt");
+//    std::ofstream fileVR("./Vertices_Refined.txt");
 //    for (Vertex &ver : vertices) {
 //        fileVR << ver.index_ << " " << ver.x_ << " " << ver.y_ << std::endl;
 //    }
 //    fileVR.close();
 //
-//    std::ofstream fileFR("../Faces_refined.txt");
+//    std::ofstream fileFR("./Faces_refined.txt");
 //    for (Face &fa : faces) {
 //        fileFR << fa.vertex0_->index_ << " " << fa.vertex1_->index_ << " " << fa.vertex2_->index_ << " " << std::endl;
 //    }
 //    fileFR.close();
 
 
+    // ================== Fill global mass and stiffness matrices ==================
     std::map<int, double> leer; //muss man anscheinend mitübergeben 
     std::vector<std::map<int, double>> globalStiffness(number_of_vertices, leer);
     std::vector<std::map<int, double>> globalMass(number_of_vertices, leer);
-
 
     for (Face &current : faces) {
         int *indices = new int[3]{current.vertex0_->index_, current.vertex1_->index_, current.vertex2_->index_};
@@ -224,17 +219,15 @@ int main(int argc, char* argv[]) {
         delete[] indices;
     }
 
-    std::ofstream fileA("../A.txt");
-    std::ofstream fileM("../M.txt");
+    // Write A.txt and M.txt
+    std::ofstream fileA("./A.txt");
+    std::ofstream fileM("./M.txt");
 
     for (int row = 0; row < number_of_vertices; row++) {
-        auto stiffnessRow = globalStiffness[row];
-        auto massRow = globalMass[row];
-
-        for (auto &stiffIter : stiffnessRow) {
+        for (auto &stiffIter : globalStiffness[row]) {
             fileA << row << " " << stiffIter.first << " " << stiffIter.second << std::endl;
         }
-        for (auto &massIter : massRow) {
+        for (auto &massIter : globalMass[row]) {
             fileM << row << " " << massIter.first << " " << massIter.second << std::endl;
         }
     }
@@ -242,20 +235,21 @@ int main(int argc, char* argv[]) {
     fileA.close();
     fileM.close();
 
-    // eigenvalue
+    // ================== start inverse power iteration ==================
+
+    // init eigenvalue
     double ew_old = 1., ew_new = 0.;
     // init eigenmode
     auto *u = new double[number_of_vertices];
     for (int i = 0; i < number_of_vertices; i++) {
-        u[i] = 0.5;
+        u[i] = 1.;
     }
-    // to store Mh * uh
-    auto *f = new double[number_of_vertices];
 
-    int c = 0;
 
-    while(std::abs((ew_new-ew_old)/ew_old)>std::pow(10,-10) && ++c <= 30){
+    while(std::abs((ew_new-ew_old)/ew_old)>std::pow(10,-10)){
         ew_old= ew_new;
+        // to store Mh * uh
+        auto *f = new double[number_of_vertices]{};
         //f=Mh*uh
         matrixVectorMultiplication(globalMass, u, f, number_of_vertices);
         //solver
@@ -270,11 +264,10 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < number_of_vertices; i++) {
             u[i] = u[i] / norm;
         }
-        //printVector(u, 10);
 
         // compute new eigenvalue
-        auto *Au = new double[number_of_vertices];
-        auto *Mu = new double[number_of_vertices];
+        auto *Au = new double[number_of_vertices]{};
+        auto *Mu = new double[number_of_vertices]{};
         matrixVectorMultiplication(globalStiffness, u, Au, number_of_vertices);
         matrixVectorMultiplication(globalMass, u, Mu, number_of_vertices);
         double Au_sum = 0, Mu_sum = 0;
@@ -284,31 +277,29 @@ int main(int argc, char* argv[]) {
         }
         ew_new = Au_sum / Mu_sum;
 
+        delete[] f;
         delete[] Au;
         delete[] Mu;
     }
 
-    std::ofstream fileEigenmode("../eigenmode.txt");
+    // Write eigenmode.txt and lambda.txt
+    std::ofstream fileEigenmode("./eigenmode.txt");
 
     for (int i = 0; i < number_of_vertices; i++) {
         fileEigenmode << vertices[i].x_ << " " << vertices[i].y_ << " " << u[i] << std::endl;
     }
 
     fileEigenmode.close();
+    // lambda:
+    std::ofstream fileLambda("./lambda.txt");
+    fileLambda << ew_new << std::endl;
+    fileLambda.close();
 
-    for (int i = 0; i < number_of_vertices; i++) {
-        delete &vertices[i];
-    }
-    for (int i = 0; i < number_of_faces; i++) {
-        delete &faces[i];
-    }
-
+    // pickup trash
     vertices.clear();
     faces.clear();
     globalStiffness.clear();
     globalMass.clear();
-    delete[] ksq;
     delete[] u;
-    delete[] f;
     return 0;
 }

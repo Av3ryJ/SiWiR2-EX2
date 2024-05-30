@@ -13,7 +13,6 @@ public:
     std::map<int, int> midpoints_;
 
     Vertex(double x, double y, int index);
-    void printVertex();
     Vertex* getMidpoint(Vertex *otherVertex, std::vector<Vertex> &vertices);
 };
 

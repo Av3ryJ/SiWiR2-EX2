@@ -15,6 +15,5 @@ public:
     static double computeKSq(double x, double y);
     void calculateStiffness();
     void calculateMass();
-    void refine(std::vector<Face> &faces, std::vector<Vertex> &vertices, int own_index);
 };
 #endif //SIWIR2_EX2_FACE_HPP

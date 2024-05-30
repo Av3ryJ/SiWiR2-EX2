@@ -1,6 +1,7 @@
 #include "Face.hpp"
 #include "Colsamm/Colsamm.h"
 
+// delta_ is a constant value for all faces
 double Face::delta_;
 
 Face::Face(Vertex *vertex0, Vertex *vertex1, Vertex *vertex2) {
@@ -25,6 +26,7 @@ double Face::computeKSq(double x, double y) {
     return (100 + delta_)*exp(-50*(x*x+y*y)) - 100;
 }
 
+// this function fills the local stiffness matrix
 void Face::calculateStiffness() {
     using namespace _COLSAMM_;
     ELEMENTS::Triangle my_element;
@@ -35,10 +37,10 @@ void Face::calculateStiffness() {
     verts[2] = vertex1_->x_; verts[3] = vertex1_->y_;
     verts[4] = vertex2_->x_; verts[5] = vertex2_->y_;
     my_element(verts);
-    // for local stiffness
     A_ = my_element.integrate(grad(v_())*grad(w_()) - func<double>(computeKSq)*v_()*w_());
 }
 
+// this function fills the local mass matrix
 void Face::calculateMass() {
     using namespace _COLSAMM_;
     ELEMENTS::Triangle my_element;
@@ -49,7 +51,6 @@ void Face::calculateMass() {
     verts[2] = vertex1_->x_; verts[3] = vertex1_->y_;
     verts[4] = vertex2_->x_; verts[5] = vertex2_->y_;
     my_element(verts);
-    // for local stiffness
     M_ = my_element.integrate(v_()*w_());
 }
 
