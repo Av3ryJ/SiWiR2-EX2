@@ -215,8 +215,10 @@ int main(int argc, char* argv[]) {
         //  add to global matrices
         for (int x = 0; x <= 2; x++) {
             for (int y = 0; y <= 2; y++) {
-                globalStiffness[indices[x]][indices[y]] += current.A_[x][y];
-                globalMass[indices[x]][indices[y]]+=current.M_[x][y];
+                auto stiffValue = globalStiffness[indices[x]][indices[y]];
+                globalStiffness[indices[x]][indices[y]] = stiffValue + current.A_[x][y];
+                auto massValue = globalMass[indices[x]][indices[y]];
+                globalMass[indices[x]][indices[y]] = massValue + current.M_[x][y];
             }
         }
         delete[] indices;
@@ -225,14 +227,15 @@ int main(int argc, char* argv[]) {
     std::ofstream fileA("../A.txt");
     std::ofstream fileM("../M.txt");
 
-    for (int x = 0; x < number_of_vertices; x++) {
-        for (int y = 0; y < number_of_vertices; y++) {
-            if (globalStiffness[x + y * number_of_vertices] != 0) {
-                fileA << x << " " << y << " " << globalStiffness[x + y * number_of_vertices] << std::endl; //TODO: 
-            }
-            if (globalMass[x + y * number_of_vertices] != 0) {
-                fileM << x << " " << y << " " << globalMass[x + y * number_of_vertices] << std::endl; //TODO
-            }
+    for (int row = 0; row < number_of_vertices; row++) {
+        auto stiffnessRow = globalStiffness[row];
+        auto massRow = globalMass[row];
+
+        for (auto &stiffIter : stiffnessRow) {
+            fileA << row << " " << stiffIter.first << " " << stiffIter.second << std::endl;
+        }
+        for (auto &massIter : massRow) {
+            fileM << row << " " << massIter.first << " " << massIter.second << std::endl;
         }
     }
 
@@ -302,8 +305,8 @@ int main(int argc, char* argv[]) {
 
     vertices.clear();
     faces.clear();
-    delete[] globalStiffness; //TODO
-    delete[] globalMass; //TODO
+    globalStiffness.clear();
+    globalMass.clear();
     delete[] ksq;
     delete[] u;
     delete[] f;
