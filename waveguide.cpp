@@ -244,7 +244,8 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < number_of_vertices; i++) {
         u[i] = 1.;
     }
-
+    //Write file for the eigenvalue after each iteration
+    std::ofstream fileLambda("./lambda.txt");
 
     while(std::abs((ew_new-ew_old)/ew_old)>std::pow(10,-10)){
         ew_old= ew_new;
@@ -276,13 +277,16 @@ int main(int argc, char* argv[]) {
             Mu_sum += u[i] * Mu[i];
         }
         ew_new = Au_sum / Mu_sum;
+        //output lambda to lamda.txt
+        fileLambda << ew_new << std::endl;
 
         delete[] f;
         delete[] Au;
         delete[] Mu;
     }
+    fileLambda.close();
 
-    // Write eigenmode.txt and lambda.txt
+    // Write eigenmode.txt
     std::ofstream fileEigenmode("./eigenmode.txt");
 
     for (int i = 0; i < number_of_vertices; i++) {
@@ -290,10 +294,7 @@ int main(int argc, char* argv[]) {
     }
 
     fileEigenmode.close();
-    // lambda:
-    std::ofstream fileLambda("./lambda.txt");
-    fileLambda << ew_new << std::endl;
-    fileLambda.close();
+    
 
     // pickup trash
     vertices.clear();
